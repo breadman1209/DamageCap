@@ -1,46 +1,42 @@
-name: Build Plugin
+name: Auto Build
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["main"]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Build with Maven (if pom.xml exists)
-        run: |
-          if [ -f pom.xml ]; then
-            mvn -B package --file pom.xml
-          else
-            echo "Skipping Maven — no pom.xml"
-          fi
+      - name: Build with Maven
+        if: ${{ hashFiles('pom.xml') != '' }}
+        run: mvn -B -e -X package
 
-      - name: Build with Gradle (if gradle exists)
-        run: |
-          if [ -f build.gradle ] || [ -f build.gradle.kts ]; then
-            chmod +x gradlew || true
-            ./gradlew build
-          else
-            echo "Skipping Gradle — no build.gradle"
-          fi
+      - name: Make Gradle executable
+        if: ${{ hashFiles('build.gradle') != '' || hashFiles('build.gradle.kts') != '' }}
+        run: chmod +x ./gradlew
 
-      - name: Upload Build Artifact
+      - name: Build with Gradle
+        if: ${{ hashFiles('build.gradle') != '' || hashFiles('build.gradle.kts') != '' }}
+        run: ./gradlew build --stacktrace --info
+
+      - name: Upload Plugin Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DamageCap-Build
+          name: Plugin-JAR
           path: |
             target/*.jar
             build/libs/*.jar
+          if-no-files-found: warn
