@@ -21,12 +21,13 @@ public class DamageCap extends JavaPlugin implements Listener {
         saveDefaultConfig();
         config = getConfig();
         Bukkit.getPluginManager().registerEvents(this, this);
-        getLogger().info("DamageCap by BreadMan enabled.");
+        getLogger().info("DamageCap enabled.");
     }
 
     @Override
     public void onDisable() {
         saveConfig();
+        getLogger().info("DamageCap disabled.");
     }
 
     @EventHandler
@@ -34,56 +35,60 @@ public class DamageCap extends JavaPlugin implements Listener {
         if (!(event.getDamager() instanceof Player player)) return;
 
         ItemStack item = player.getInventory().getItemInMainHand();
-        if (item == null || item.getType() == Material.AIR) return;
+        if (item == null || item.getType() == null || item.getType() == Material.AIR) return;
 
-        String key = item.getType().toString().toLowerCase();
+        String weapon = item.getType().toString().toUpperCase();
 
-        if (config.contains("caps." + key)) {
-            double max = config.getDouble("caps." + key);
-            if (event.getDamage() > max) {
-                event.setDamage(max);
-            }
+        if (!config.contains("weapon-caps." + weapon)) {
+            double damage = event.getDamage();
+            config.set("weapon-caps." + weapon, damage);
+            saveConfig();
+            if (config.getBoolean("debug"))
+                getLogger().info("Added new weapon: " + weapon + " = " + damage);
+        }
+
+        double maxDamage = config.getDouble("weapon-caps." + weapon, -1);
+        double globalMax = config.getDouble("max-global-damage", -1);
+
+        if (globalMax > 0) maxDamage = Math.min(maxDamage, globalMax);
+
+        if (maxDamage > 0 && event.getDamage() > maxDamage) event.setDamage(maxDamage);
+
+        if (config.getBoolean("debug")) {
+            getLogger().info(player.getName() + " hit with " + weapon + " for " + event.getDamage() + " (max " + (maxDamage < 0 ? "infinite" : maxDamage) + ")");
         }
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!sender.hasPermission("dcap.use")) {
-            sender.sendMessage("You do not have permission to use this command.");
+            sender.sendMessage("§cYou do not have permission.");
             return true;
         }
 
         if (args.length != 2) {
-            sender.sendMessage("Usage: /dcap <weapon> maxd:<hearts>");
+            sender.sendMessage("§eUsage: /dcap <weapon> <damage|infinite>");
             return true;
         }
 
         String weapon = args[0].toUpperCase();
-        Material mat = Material.matchMaterial(weapon);
-        if (mat == null) {
-            sender.sendMessage("Invalid weapon name: " + weapon);
-            return true;
+        double damage;
+
+        if (args[1].equalsIgnoreCase("infinite") || args[1].equalsIgnoreCase("-1")) {
+            damage = -1;
+        } else {
+            try {
+                damage = Double.parseDouble(args[1]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage("§cInvalid number format.");
+                return true;
+            }
         }
 
-        String param = args[1];
-        if (!param.startsWith("maxd:")) {
-            sender.sendMessage("Second argument must be maxd:<hearts>");
-            return true;
-        }
-
-        double hearts;
-        try {
-            hearts = Double.parseDouble(param.substring(5));
-        } catch (NumberFormatException e) {
-            sender.sendMessage("Invalid number format for hearts.");
-            return true;
-        }
-
-        double maxDamage = hearts * 2;
-        config.set("caps." + weapon.toLowerCase(), maxDamage);
+        config.set("weapon-caps." + weapon, damage);
         saveConfig();
 
-        sender.sendMessage("Set max damage of " + weapon + " to " + hearts + " hearts.");
+        sender.sendMessage("§aSet max damage of §e" + weapon + " §ato " + (damage < 0 ? "infinite" : damage));
         return true;
     }
 }
