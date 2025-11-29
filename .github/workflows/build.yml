@@ -2,7 +2,8 @@ name: Build Plugin
 
 on:
   push:
-    branches: ["main", "*"]
+    branches:
+      - "**"
   pull_request:
 
 jobs:
@@ -11,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -19,15 +20,22 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      # For Maven Projects
-      - name: Build with Maven
-        if: exists('pom.xml')
-        run: mvn -B package --file pom.xml
+      - name: Try Maven Build
+        run: |
+          if [ -f "pom.xml" ]; then
+            mvn -B package --file pom.xml
+          else
+            echo "No pom.xml found – skipping Maven."
+          fi
 
-      # For Gradle Projects
-      - name: Build with Gradle
-        if: exists('build.gradle') || exists('build.gradle.kts')
-        run: ./gradlew build
+      - name: Try Gradle Build
+        run: |
+          if [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+            chmod +x ./gradlew || true
+            ./gradlew build
+          else
+            echo "No Gradle build file found – skipping Gradle."
+          fi
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
