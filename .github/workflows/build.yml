@@ -1,0 +1,38 @@
+name: Build Plugin
+
+on:
+  push:
+    branches: ["main", "*"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      # For Maven Projects
+      - name: Build with Maven
+        if: exists('pom.xml')
+        run: mvn -B package --file pom.xml
+
+      # For Gradle Projects
+      - name: Build with Gradle
+        if: exists('build.gradle') || exists('build.gradle.kts')
+        run: ./gradlew build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: DamageCap-Build
+          path: |
+            target/*.jar
+            build/libs/*.jar
