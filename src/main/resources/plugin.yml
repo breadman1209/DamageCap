@@ -1,0 +1,14 @@
+name: DamageCap
+version: 1.0
+main: me.breadman.damagecap.DamageCap
+author: BreadMan
+api-version: "1.20"
+commands:
+  dcap:
+    description: Set max damage for a weapon
+    usage: /dcap <weapon> maxd:<hearts>
+    permission: dcap.use
+permissions:
+  dcap.use:
+    description: Allows using /dcap command
+    default: op
