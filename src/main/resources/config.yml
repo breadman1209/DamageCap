@@ -1,0 +1,6 @@
+# DamageCap Plugin Config
+max-global-damage: -1   
+
+weapon-caps: {}         
+
+debug: false
